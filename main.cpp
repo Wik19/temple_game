@@ -12,7 +12,8 @@ public:
         shape.setPosition(position);
         if (!texture.loadFromFile(texturePath)) {
             std::cerr << "Error loading texture: " << texturePath << std::endl;
-        } else {
+        }
+        else {
             shape.setTexture(&texture);
             textureSize = sf::Vector2f(texture.getSize());
         }
@@ -112,14 +113,116 @@ public:
     }
 
     void setPosition(const sf::Vector2f& position) {
-        sprite2.setPosition(position);
+        sprite.setPosition(position);
     }
 
     sf::FloatRect getGlobalBounds() const {
         return sprite.getGlobalBounds();
     }
+};
+
+class Knife {
+public:
+    sf::Sprite sprite;
+    sf::Texture texture;
+    bool isCollected;
+
+    Knife(sf::Vector2f position) {
+        if (!texture.loadFromFile("knife.png")) {
+            std::cerr << "Error loading knife texture.\n";
+        }
+        sprite.setTexture(texture);
+        sprite.setPosition(position);
+        isCollected = false;
+    }
+
+    void draw(sf::RenderWindow& window) {
+        if (!isCollected) {
+            window.draw(sprite);
+        }
+    }
+
+    void setPosition(const sf::Vector2f& position) {
+        sprite.setPosition(position);
+    }
+
+    sf::FloatRect getGlobalBounds() const {
+        return sprite.getGlobalBounds();
+    }
+};
+
+class InventoryMenu {
+public:
+    InventoryMenu() {
+        // Load weapon and perk textures
+        if (!weaponTexture1.loadFromFile("weapon1.png") ||
+            !weaponTexture2.loadFromFile("weapon2.png") ||
+            !weaponTexture3.loadFromFile("weapon3.png") ||
+            !perkTexture.loadFromFile("perk.png")) {
+            std::cerr << "Error loading inventory item textures.\n";
+        }
+
+        // Set the position and size of the inventory menu
+        const float menuWidth = 120.0f;
+        const float menuHeight = 40.0f;
+        const float centerX = 800.0f - menuWidth / 2 - 10.0f;
+        const float centerY = 600.0f - menuHeight / 2 - 10.0f;
+
+        // Create perk circle and set its position
+        sf::CircleShape perkCircle(menuHeight / 2);
+        perkCircle.setTexture(&perkTexture);
+        perkCircle.setPosition(centerX, centerY);
+        perkCircle.setOrigin(menuHeight / 2, menuHeight / 2);
+        perkCircles.push_back(perkCircle);
+
+        // Calculate the position and size of the weapon circles
+        const float weaponSize = menuHeight * 0.6f;
+        const float weaponSpacing = (menuWidth - 2 * weaponSize) / 3;
+
+        // Create weapon circles and set their positions
+        for (int i = 0; i < numWeapons; ++i) {
+            sf::CircleShape weaponCircle(weaponSize / 2);
+            weaponCircle.setTexture(&getWeaponTexture(i + 1));
+            float x = centerX - menuWidth / 2 + weaponSize / 2 + (weaponSize + weaponSpacing) * i;
+            float y = centerY;
+            weaponCircle.setPosition(x, y);
+            weaponCircle.setOrigin(weaponSize / 2, weaponSize / 2);
+            weaponCircles.push_back(weaponCircle);
+        }
+    }
+
+    void draw(sf::RenderWindow& window) {
+        for (const auto& perkCircle : perkCircles) {
+            window.draw(perkCircle);
+        }
+        for (const auto& weaponCircle : weaponCircles) {
+            window.draw(weaponCircle);
+        }
+    }
+
 private:
-    sf::Sprite sprite2;
+    static constexpr int numWeapons = 3;  // Number of weapons in the inventory
+
+    sf::Texture weaponTexture1;  // Texture for weapon 1
+    sf::Texture weaponTexture2;  // Texture for weapon 2
+    sf::Texture weaponTexture3;  // Texture for weapon 3
+    sf::Texture perkTexture;     // Texture for perk
+
+    std::vector<sf::CircleShape> weaponCircles;  // Circles for weapons
+    std::vector<sf::CircleShape> perkCircles;    // Circles for perk
+
+    sf::Texture& getWeaponTexture(int weaponIndex) {
+        switch (weaponIndex) {
+        case 1:
+            return weaponTexture1;
+        case 2:
+            return weaponTexture2;
+        case 3:
+            return weaponTexture3;
+        default:
+            throw std::out_of_range("Invalid weapon index");
+        }
+    }
 };
 
 Player player("player.png");
@@ -166,6 +269,11 @@ int main() {
 
     Coin coin(sf::Vector2f(disX(gen), disY(gen)));
 
+    InventoryMenu inventoryMenu;
+
+    // Create knife
+    Knife knife(sf::Vector2f(80.0, 500.0));
+
     // Create font for counter text
     sf::Font font;
     if (!font.loadFromFile("arial.ttf")) {
@@ -183,6 +291,8 @@ int main() {
     int coinCount = 0;
 
     bool coinCollected = false;
+
+    bool knifeCollected = false;
 
     while (window.isOpen()) {
         sf::Event event;
@@ -232,6 +342,12 @@ int main() {
             coin.setPosition(sf::Vector2f(disX(gen), disY(gen)));
         }
 
+        // Check collision with knife
+        if (player.getGlobalBounds().intersects(knife.getGlobalBounds()) && !knifeCollected) {
+            // Player collected the knife
+            knifeCollected = true;
+        }
+
         // Clearing window
         window.clear();
 
@@ -244,14 +360,16 @@ int main() {
         wallBottom.draw(window);
         wallLeft.draw(window);
         wallRight.draw(window);
-
+        inventoryMenu.draw(window);
         // Draw coin
         coin.draw(window);
 
+        if (!knifeCollected) {
+            knife.draw(window);
+        }
+
         // Draw player
         player.drawPlayer(window);
-
-        wallRight.draw(window);
 
         trap.draw(window);
 
