@@ -1,6 +1,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <random>
+
 #include <cmath>
 
 class Obstacle {
