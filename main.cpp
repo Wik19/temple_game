@@ -1,6 +1,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <random>
+#include <cmath>
 
 class Obstacle {
 public:
@@ -36,6 +37,10 @@ class Monster {
 public:
     sf::Sprite sprite;
     sf::Texture texture;
+    sf::Vector2f position;
+    float speed;
+    Monster(sf::Vector2f position, float speed)
+        : position(position) {}
 
     Monster(sf::Texture& tex, sf::Vector2f position) {
         texture = tex;
@@ -50,6 +55,20 @@ public:
     sf::FloatRect getGlobalBounds() const {
         return sprite.getGlobalBounds();
     }
+
+    void moveTowardsPlayer(sf::Vector2f playerPosition) {
+        sf::Vector2f direction = playerPosition - position;
+        float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+
+        if (distance > 0.0f) {
+
+            direction /= distance;
+
+            // Move towards the player
+            position += direction * speed;
+        }
+    }
+
 };
 
 class Player {

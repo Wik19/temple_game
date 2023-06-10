@@ -2,6 +2,9 @@ TEMPLATE = app
 CONFIG += console c++17
 CONFIG -= app_bundle
 CONFIG -= qt
+
+SOURCES += \
+        main.cpp
 INCLUDEPATH += "C:/SFML-2.5.1/include"
 
 LIBS += -L"C:/SFML-2.5.1/lib"
@@ -11,9 +14,4 @@ CONFIG(debug, debug|release){
     LIBS += -lsfml-audio -lsfml-graphics -lsfml-network -lsfml-system -lsfml-window
 }
 
-SOURCES += \
-        functions.cpp \
-        main.cpp
-
-HEADERS += \
-    TETRIS_HEADER.hpp
+HEADERS +=
