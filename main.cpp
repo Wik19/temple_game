@@ -171,82 +171,46 @@ public:
     }
 };
 
-class InventoryMenu {
+class HealthMenu {
 public:
-    InventoryMenu() {
-        // Load weapon and perk textures
-        if (!weaponTexture1.loadFromFile("weapon1.png") ||
-            !weaponTexture2.loadFromFile("weapon2.png") ||
-            !weaponTexture3.loadFromFile("weapon3.png") ||
-            !perkTexture.loadFromFile("perk.png")) {
-            std::cerr << "Error loading inventory item textures.\n";
+    HealthMenu(const std::string& texturePath, const sf::Vector2f& position) {
+        if (!texture.loadFromFile(texturePath)) {
+            std::cerr << "Error loading health texture: " << texturePath << std::endl;
         }
-
-        // Set the position and size of the inventory menu
-        const float menuWidth = 120.0f;
-        const float menuHeight = 40.0f;
-        const float centerX = 800.0f - menuWidth / 2 - 10.0f;
-        const float centerY = 600.0f - menuHeight / 2 - 10.0f;
-
-        // Create perk circle and set its position
-        sf::CircleShape perkCircle(menuHeight / 2);
-        perkCircle.setTexture(&perkTexture);
-        perkCircle.setPosition(centerX, centerY);
-        perkCircle.setOrigin(menuHeight / 2, menuHeight / 2);
-        perkCircles.push_back(perkCircle);
-
-        // Calculate the position and size of the weapon circles
-        const float weaponSize = menuHeight * 0.6f;
-        const float weaponSpacing = (menuWidth - 2 * weaponSize) / 3;
-
-        // Create weapon circles and set their positions
-        for (int i = 0; i < numWeapons; ++i) {
-            sf::CircleShape weaponCircle(weaponSize / 2);
-            weaponCircle.setTexture(&getWeaponTexture(i + 1));
-            float x = centerX - menuWidth / 2 + weaponSize / 2 + (weaponSize + weaponSpacing) * i;
-            float y = centerY;
-            weaponCircle.setPosition(x, y);
-            weaponCircle.setOrigin(weaponSize / 2, weaponSize / 2);
-            weaponCircles.push_back(weaponCircle);
-        }
+        sprite.setTexture(texture);
+        sprite.setPosition(position);
+        visible = false;
     }
 
     void draw(sf::RenderWindow& window) {
-        for (const auto& perkCircle : perkCircles) {
-            window.draw(perkCircle);
+        for (int i = 0; i < hearts.size(); i++) {
+            window.draw(hearts[i]);
         }
-        for (const auto& weaponCircle : weaponCircles) {
-            window.draw(weaponCircle);
-        }
+    }
+
+    void setVisibility(bool visible) {
+        this->visible = visible;
+    }
+
+    void addHeart() {
+        sf::Sprite heart;
+        heart.setTexture(texture);
+        float x = sprite.getPosition().x + (hearts.size() * sprite.getGlobalBounds().width);
+        float y = sprite.getPosition().y;
+        heart.setPosition(sf::Vector2f(x, y));
+        hearts.push_back(heart);
     }
 
 private:
-    static constexpr int numWeapons = 3;  // Number of weapons in the inventory
-
-    sf::Texture weaponTexture1;  // Texture for weapon 1
-    sf::Texture weaponTexture2;  // Texture for weapon 2
-    sf::Texture weaponTexture3;  // Texture for weapon 3
-    sf::Texture perkTexture;     // Texture for perk
-
-    std::vector<sf::CircleShape> weaponCircles;  // Circles for weapons
-    std::vector<sf::CircleShape> perkCircles;    // Circles for perk
-
-    sf::Texture& getWeaponTexture(int weaponIndex) {
-        switch (weaponIndex) {
-        case 1:
-            return weaponTexture1;
-        case 2:
-            return weaponTexture2;
-        case 3:
-            return weaponTexture3;
-        default:
-            throw std::out_of_range("Invalid weapon index");
-        }
-    }
+    sf::Texture texture;
+    sf::Sprite sprite;
+    bool visible;
+    std::vector<sf::Sprite> hearts;
 };
 
 Player player("player.png");
 int coinCount = 0;
+int health = 4; // Maximum health is 4
 
 void handleCollision(Player& player, Coin& coin) {
     if (!coin.isCollected && player.getGlobalBounds().intersects(coin.getGlobalBounds())) {
@@ -254,6 +218,10 @@ void handleCollision(Player& player, Coin& coin) {
         coinCount++;
         std::cout << "Coins collected: " << coinCount << std::endl;
     }
+}
+
+void changeHealth(int newHealth) {
+    health = newHealth;
 }
 
 int main() {
@@ -267,6 +235,10 @@ int main() {
         // Handle failed loading
         return 1;
     }
+
+    // Create health menu
+    HealthMenu healthMenu("hearth.png", sf::Vector2f(10.f, 10.f));
+    bool showHealthMenu = true;
 
     // Create monsters
     Monster monster1(monsterTexture1, sf::Vector2f(100, 100));
@@ -289,7 +261,13 @@ int main() {
 
     Coin coin(sf::Vector2f(disX(gen), disY(gen)));
 
-    InventoryMenu inventoryMenu;
+    // Create inventory circle
+    sf::CircleShape inventoryCircle(50.f);
+    inventoryCircle.setFillColor(sf::Color(255, 255, 255, 200));
+    inventoryCircle.setOutlineThickness(2.f);
+    inventoryCircle.setOutlineColor(sf::Color::Black);
+    inventoryCircle.setPosition(700.f, 500.f);
+
 
     // Create knife
     Knife knife(sf::Vector2f(80.0, 500.0));
@@ -307,6 +285,42 @@ int main() {
     counterText.setCharacterSize(24);
     counterText.setFillColor(sf::Color::White);
     counterText.setPosition(650, 10); // Updated position
+
+    // Load knife texture for inventory
+    sf::Texture knifeTexture;
+    if (!knifeTexture.loadFromFile("knife.png")) {
+        std::cerr << "Error loading knife texture.\n";
+        return 1;
+    }
+
+    // Load heart texture for health menu
+    sf::Texture heartTexture;
+    if (!heartTexture.loadFromFile("hearth.png")) {
+        std::cerr << "Error loading heart texture.\n";
+        return 1;
+    }
+
+    // Create vector of heart sprites
+    std::vector<sf::Sprite> hearts;
+
+    // Set initial health to max (4)
+    int health = 4;
+
+    // Calculate heart positions based on health
+    for (int i = 0; i < health; i++) {
+        sf::Sprite heart;
+        heart.setTexture(heartTexture);
+        float x = 10.f + (i * (heart.getGlobalBounds().width + 5.f));  // Add spacing of 5 pixels between hearts
+        float y = 10.f;
+        heart.setPosition(sf::Vector2f(x, y));
+        hearts.push_back(heart);
+    }
+
+    sf::Sprite knifeSprite;
+    knifeSprite.setTexture(knifeTexture);
+    sf::Vector2f knifePosition(inventoryCircle.getPosition().x + inventoryCircle.getRadius() - knifeSprite.getGlobalBounds().width / 2.f,
+                               inventoryCircle.getPosition().y + inventoryCircle.getRadius() - knifeSprite.getGlobalBounds().height / 2.f);
+    knifeSprite.setPosition(knifePosition);
 
     int coinCount = 0;
 
@@ -348,9 +362,20 @@ int main() {
             }
         }
 
+        // Controls
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+            showHealthMenu = true;
+        }
+
         // Check collision with trap
         if (player.getGlobalBounds().intersects(trap.getGlobalBounds())) {
             // Player touched the trap, do something
+        }
+
+        if (event.type == sf::Event::KeyPressed) {
+            if (event.key.code == sf::Keyboard::Space) {
+                changeHealth(3); // Change health to 3 when space bar is pressed
+            }
         }
 
         // Check collision with coin
@@ -372,15 +397,11 @@ int main() {
         window.clear();
 
         // Drawing monsters and obstacles in window
-        monster1.draw(window);
-        monster2.draw(window);
-        monster3.draw(window);
         floor.draw(window);
         wallUp.draw(window);
         wallBottom.draw(window);
         wallLeft.draw(window);
         wallRight.draw(window);
-        inventoryMenu.draw(window);
         // Draw coin
         coin.draw(window);
 
@@ -392,10 +413,28 @@ int main() {
         player.drawPlayer(window);
 
         trap.draw(window);
+        monster1.draw(window);
+        monster2.draw(window);
+        monster3.draw(window);
 
         // Draw counter text
         counterText.setString("Coins: " + std::to_string(coinCount));
         window.draw(counterText);
+
+        // Draw health
+        if (showHealthMenu) {
+            for (const auto& heart : hearts) {
+                window.draw(heart);
+            }
+        }
+
+        // Draw inventory circle
+        window.draw(inventoryCircle);
+
+        // Draw knife sprite in inventory
+        if (knifeCollected) {
+            window.draw(knifeSprite);
+        }
 
         // Display window
         window.display();
