@@ -199,6 +199,9 @@ public:
         for (auto& coin : coins) {
             coin->update(deltaTime);
         }
+        sprite.setTexture(texture);
+        sprite.setPosition(position);
+        visible = false;
     }
     void run() {
         sf::Clock clock;
@@ -216,6 +219,19 @@ public:
             update(deltaTime);
             render();
         }
+    }
+
+    void setVisibility(bool visible) {
+        this->visible = visible;
+    }
+
+    void addHeart() {
+        sf::Sprite heart;
+        heart.setTexture(texture);
+        float x = sprite.getPosition().x + (hearts.size() * sprite.getGlobalBounds().width);
+        float y = sprite.getPosition().y;
+        heart.setPosition(sf::Vector2f(x, y));
+        hearts.push_back(heart);
     }
 
 private:
